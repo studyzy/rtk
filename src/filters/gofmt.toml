@@ -1,0 +1,23 @@
+[filters.gofmt]
+description = "Compact gofmt -l output — list files needing formatting, cap rows"
+match_command = "^gofmt\\b.*\\b-l\\b"
+strip_lines_matching = [
+  "^\\s*$",
+]
+max_lines = 10
+on_empty = "gofmt: all files formatted"
+
+[[tests.gofmt]]
+name = "all formatted returns on_empty message"
+input = ""
+expected = "gofmt: all files formatted"
+
+[[tests.gofmt]]
+name = "small list under limit passes through"
+input = "main.go\nutils.go"
+expected = "main.go\nutils.go"
+
+[[tests.gofmt]]
+name = "large list truncated with hint"
+input = "a.go\nb.go\nc.go\nd.go\ne.go\nf.go\ng.go\nh.go\ni.go\nj.go\nk.go\nl.go"
+expected = "a.go\nb.go\nc.go\nd.go\ne.go\nf.go\ng.go\nh.go\ni.go\nj.go\n... (2 lines truncated)"

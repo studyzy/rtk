@@ -1,0 +1,23 @@
+[filters.goimports]
+description = "Compact goimports -l output — list files with import issues, cap rows"
+match_command = "^goimports\\b.*\\b-l\\b"
+strip_lines_matching = [
+  "^\\s*$",
+]
+max_lines = 10
+on_empty = "goimports: all imports tidy"
+
+[[tests.goimports]]
+name = "all tidy returns on_empty message"
+input = ""
+expected = "goimports: all imports tidy"
+
+[[tests.goimports]]
+name = "small list under limit passes through"
+input = "pkg/foo.go\npkg/bar.go"
+expected = "pkg/foo.go\npkg/bar.go"
+
+[[tests.goimports]]
+name = "large list truncated with hint"
+input = "f01.go\nf02.go\nf03.go\nf04.go\nf05.go\nf06.go\nf07.go\nf08.go\nf09.go\nf10.go\nf11.go\nf12.go"
+expected = "f01.go\nf02.go\nf03.go\nf04.go\nf05.go\nf06.go\nf07.go\nf08.go\nf09.go\nf10.go\n... (2 lines truncated)"

@@ -10,7 +10,10 @@ mod parser;
 use cmds::cloud::{aws_cmd, container, curl_cmd, psql_cmd, wget_cmd};
 use cmds::dotnet::{binlog, dotnet_cmd, dotnet_format_report, dotnet_trx};
 use cmds::git::{diff_cmd, gh_cmd, git, glab_cmd, gt_cmd};
-use cmds::go::{go_cmd, golangci_cmd};
+use cmds::go::{
+    buf_cmd, go_cmd, go_list_cmd, go_mod_cmd, golangci_cmd, goreleaser_cmd, gotestsum_cmd,
+    govulncheck_cmd, staticcheck_cmd,
+};
 use cmds::js::{
     lint_cmd, next_cmd, npm_cmd, playwright_cmd, pnpm_cmd, prettier_cmd, prisma_cmd, tsc_cmd,
     vitest_cmd,
@@ -735,6 +738,41 @@ enum Commands {
         args: Vec<String>,
     },
 
+    /// gotestsum wrapper with --jsonfile interception for filtered test summaries
+    Gotestsum {
+        /// gotestsum arguments (forwarded as-is; --jsonfile injected automatically)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// govulncheck with compact JSON-driven output
+    Govulncheck {
+        /// govulncheck arguments (`-json` is auto-injected when missing)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// staticcheck with clustered JSON-driven output
+    Staticcheck {
+        /// staticcheck arguments (`-f json` is auto-injected when missing)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// buf (Protobuf) with compact lint/build/generate output
+    Buf {
+        /// buf arguments (subcommand + flags, e.g. `lint ./...`)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
+    /// goreleaser release/build/check with compact output
+    Goreleaser {
+        /// goreleaser arguments (subcommand + flags)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+
     /// Show hook rewrite audit metrics (requires RTK_HOOK_AUDIT=1)
     #[command(name = "hook-audit")]
     HookAudit {
@@ -1114,6 +1152,18 @@ enum GoCommands {
     /// Vet with compact output
     Vet {
         /// Additional go vet arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// `go mod` with compact output (tidy, download, graph)
+    Mod {
+        /// Additional `go mod` arguments (subcommand + flags)
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// `go list` with compact JSON-driven output
+    List {
+        /// Additional `go list` arguments
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -2148,6 +2198,8 @@ fn run_cli() -> Result<i32> {
             GoCommands::Test { args } => go_cmd::run_test(&args, cli.verbose)?,
             GoCommands::Build { args } => go_cmd::run_build(&args, cli.verbose)?,
             GoCommands::Vet { args } => go_cmd::run_vet(&args, cli.verbose)?,
+            GoCommands::Mod { args } => go_mod_cmd::run(&args, cli.verbose)?,
+            GoCommands::List { args } => go_list_cmd::run(&args, cli.verbose)?,
             GoCommands::Other(args) => go_cmd::run_other(&args, cli.verbose)?,
         },
 
@@ -2164,6 +2216,16 @@ fn run_cli() -> Result<i32> {
         Commands::GolangciLint { args } => golangci_cmd::run(&args, cli.verbose)?,
 
         Commands::Gradlew { args } => gradlew_cmd::run(&args, cli.verbose)?,
+
+        Commands::Gotestsum { args } => gotestsum_cmd::run(&args, cli.verbose)?,
+
+        Commands::Govulncheck { args } => govulncheck_cmd::run(&args, cli.verbose)?,
+
+        Commands::Staticcheck { args } => staticcheck_cmd::run(&args, cli.verbose)?,
+
+        Commands::Buf { args } => buf_cmd::run(&args, cli.verbose)?,
+
+        Commands::Goreleaser { args } => goreleaser_cmd::run(&args, cli.verbose)?,
 
         Commands::HookAudit { since } => {
             hooks::hook_audit_cmd::run(since, cli.verbose)?;
@@ -2505,6 +2567,11 @@ fn is_operational_command(cmd: &Commands) -> bool {
             | Commands::Go { .. }
             | Commands::GolangciLint { .. }
             | Commands::Gt { .. }
+            | Commands::Gotestsum { .. }
+            | Commands::Govulncheck { .. }
+            | Commands::Staticcheck { .. }
+            | Commands::Buf { .. }
+            | Commands::Goreleaser { .. }
     )
 }
 
